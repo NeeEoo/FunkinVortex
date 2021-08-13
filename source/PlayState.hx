@@ -123,6 +123,11 @@ class PlayState extends FlxUIState
 	var musicSound:Sound;
 	var vocals:Sound;
 
+	var enemyBG1:FlxSprite;
+	var enemyBG2:FlxSprite;
+	var bfBG1:FlxSprite;
+	var bfBG2:FlxSprite;
+
 	static var vocalSound:FlxSound;
 
 	var snapInfo:Snaps = Four;
@@ -134,6 +139,32 @@ class PlayState extends FlxUIState
 		strumLine = new FlxSpriteGroup(0, 0);
 		curRenderedNotes = new FlxTypedSpriteGroup<Note>();
 		curRenderedSus = new FlxSpriteGroup();
+
+		trace("BANA");
+		remove(enemyBG1);
+		remove(enemyBG2);
+		remove(bfBG1);
+		remove(bfBG2);
+		var GRID_S = 40;
+		var yFloor = Math.floor(strumLine.y / GRID_S);
+		enemyBG1 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 32);
+		enemyBG1.x = strumLine.x + 50 - GRID_S * 5;
+		enemyBG1.y = yFloor;
+		enemyBG2 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 32);
+		enemyBG2.x = strumLine.x + 50 - GRID_S * 5;
+		enemyBG2.y = yFloor + GRID_S * 32;
+		bfBG1 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 32);
+		bfBG1.x = strumLine.x + 50;
+		bfBG1.y = yFloor;
+		bfBG2 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 32);
+		bfBG2.x = strumLine.x + 50;
+		bfBG2.y = yFloor + GRID_S * 32;
+
+		add(enemyBG1);
+		add(enemyBG2);
+		add(bfBG1);
+		add(bfBG2);
+
 		if (_song == null)
 			_song = {
 				song: 'Test',
@@ -157,7 +188,8 @@ class PlayState extends FlxUIState
 				mania: 0
 			};
 		// make it ridulously big
-		staffLines = new FlxSprite().makeGraphic(FlxG.width, FlxG.height * _song.notes.length, FlxColor.BLACK);
+		staffLines = new FlxSprite().makeGraphic(FlxG.width, FlxG.height * _song.notes.length, FlxColor.TRANSPARENT);
+		staffLines.alpha = 0;
 		generateStrumLine();
 		strumLine.screenCenter(X);
 		trace(strumLine);
@@ -165,8 +197,13 @@ class PlayState extends FlxUIState
 		chart = new FlxSpriteGroup();
 		chart.add(staffLines);
 		chart.add(strumLine);
-		chart.add(curRenderedNotes);
+		updateGrid();
+		chart.add(enemyBG1);
+		chart.add(enemyBG2);
+		chart.add(bfBG1);
+		chart.add(bfBG2);
 		chart.add(curRenderedSus);
+		chart.add(curRenderedNotes);
 		#if !electron
 		FlxG.mouse.useSystemCursor = true;
 		#end
@@ -197,7 +234,8 @@ class PlayState extends FlxUIState
 			future.onComplete(function(s:String)
 			{
 				_song = Song.loadFromJson(s);
-				FlxG.resetState();
+				FlxG.resetGame();
+				updateGrid();
 			});
 		};
 		var loadInstMenu = new MenuItem();
@@ -514,6 +552,33 @@ class PlayState extends FlxUIState
 		// add(haxeUIOpen);
 	}
 
+	function updateGrid()
+	{
+		var GRID_S = 40;
+		remove(enemyBG1);
+		remove(enemyBG2);
+		remove(bfBG1);
+		remove(bfBG2);
+		var BG1Floor = (strumLine.y % (GRID_S * 64));
+		var BG2Floor = (strumLine.y + GRID_S * 32) % (GRID_S * 64);
+		enemyBG1 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 64);
+		enemyBG1.x = strumLine.x + 50 - GRID_S * 5;
+		enemyBG1.y = 0 + (strumLine.y - BG1Floor);
+		enemyBG2 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 64);
+		enemyBG2.x = strumLine.x + 50 - GRID_S * 5;
+		enemyBG2.y = GRID_S * 32 + (strumLine.y - BG2Floor);
+		bfBG1 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 64);
+		bfBG1.x = strumLine.x + 50;
+		bfBG1.y = 0 + (strumLine.y - BG1Floor);
+		bfBG2 = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_S * 32);
+		bfBG2.x = strumLine.x + 50;
+		bfBG2.y = GRID_S * 32 + (strumLine.y - BG2Floor);
+		add(enemyBG1);
+		add(enemyBG2);
+		add(bfBG1);
+		add(bfBG2);
+	}
+
 	function addSection(lengthInSteps:Int = 16)
 	{
 		var sec:Section.SwagSection = {
@@ -654,7 +719,8 @@ class PlayState extends FlxUIState
 		future.onComplete(function(s:String)
 		{
 			_song = Song.loadFromJson(s);
-			FlxG.resetState();
+			FlxG.resetGame();
+			updateGrid();
 		});
 	}
 
@@ -903,6 +969,10 @@ class PlayState extends FlxUIState
 				{
 					vocalSound.time = FlxG.sound.music.time;
 				}
+				if (strumLine.y % 60 > 55)
+				{
+					updateGrid();
+				}
 			}
 		}
 		else
@@ -964,9 +1034,13 @@ class PlayState extends FlxUIState
 	{
 		for (i in -4...4)
 		{
+			var offset = 0;
+			if (i < 0)
+			{
+				offset = 1;
+			}
 			var babyArrow = new FlxSprite(strumLine.x, strumLine.y);
 			babyArrow.frames = FlxAtlasFrames.fromSparrow('assets/images/NOTE_assets.png', 'assets/images/NOTE_assets.xml');
-
 			babyArrow.animation.addByPrefix('green', 'arrowUP');
 			babyArrow.animation.addByPrefix('blue', 'arrowDOWN');
 			babyArrow.animation.addByPrefix('purple', 'arrowLEFT');
@@ -984,7 +1058,8 @@ class PlayState extends FlxUIState
 			}
 			babyArrow.antialiasing = true;
 			babyArrow.setGraphicSize(Std.int(40));
-			babyArrow.x += 160 * babyArrow.scale.x * i + 50;
+
+			babyArrow.x += 40 * (i - offset) + 50;
 			babyArrow.updateHitbox();
 			babyArrow.scrollFactor.set();
 			babyArrow.ID = i;
