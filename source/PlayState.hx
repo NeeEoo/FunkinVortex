@@ -198,10 +198,10 @@ class PlayState extends FlxUIState
 		chart.add(staffLines);
 		chart.add(strumLine);
 		updateGrid();
-		chart.add(enemyBG1);
-		chart.add(enemyBG2);
-		chart.add(bfBG1);
-		chart.add(bfBG2);
+		// chart.add(enemyBG1);
+		// chart.add(enemyBG2);
+		// chart.add(bfBG1);
+		// chart.add(bfBG2);
 		chart.add(curRenderedSus);
 		chart.add(curRenderedNotes);
 		#if !electron
