@@ -24,11 +24,6 @@ class CoolUtil
 		return daList;
 	}
 
-	public static function coolDynamicTextFile(path:String):Array<String>
-	{
-		return coolTextFile(path);
-	}
-
 	public static function numberArray(max:Int, ?min = 0):Array<Int>
 	{
 		var dumbArray:Array<Int> = [];
@@ -39,7 +34,7 @@ class CoolUtil
 		return dumbArray;
 	}
 
-	public static function clamp(mini:Float, maxi:Float, value:Float):Float
+	public inline static function clamp(mini:Float, maxi:Float, value:Float):Float
 	{
 		return Math.min(Math.max(mini, value), maxi);
 	}
@@ -60,26 +55,12 @@ class CoolUtil
 
 	public static function truncateFloat(number:Float, precision:Int):Float
 	{
-		var num = number;
-		num = num * Math.pow(10, precision);
-		num = Math.round(num) / Math.pow(10, precision);
-		return num;
+		var perc = Math.pow(10, precision);
+		return Math.round(number * perc) / perc;
 	}
 
-	public static function nearlyEquals(v1:Float, v2:Float, by:Float = 10):Bool
+	public inline static function nearlyEquals(v1:Float, v2:Float, by:Float = 10):Bool
 	{
 		return Math.abs(v1 - v2) < by;
-	}
-}
-
-class FlxTools
-{
-	// Load a graphic and ensure it exists
-	static public function loadGraphicDynamic(s:FlxSprite, path:String, animated:Bool = false, width:Int = 0, height:Int = 0, unique:Bool = false,
-			?key:String):FlxSprite
-	{
-		var sus:BitmapData = FNFAssets.getBitmapData(path);
-		s.loadGraphic(sus, animated, width, height, unique, key);
-		return s;
 	}
 }

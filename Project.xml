@@ -29,8 +29,14 @@
 
 	<!-- _____________________________ Path Settings ____________________________ -->
 
-	<set name="BUILD_DIR" value="export" unless="32bit"/>
-	<set name="BUILD_DIR" value="export/32bit" if="32bit" />
+	<section unless="32bit">
+		<set name="BUILD_DIR" value="export/debug" if="debug" />
+		<set name="BUILD_DIR" value="export/release" unless="debug" />
+	</section>
+	<section if="32bit">
+		<set name="BUILD_DIR" value="export/32bit/debug" if="debug" />
+		<set name="BUILD_DIR" value="export/32bit/release" unless="debug" />
+	</section>
 	<classpath name="source" />
 	<assets path="assets" />
 	<assets path="NOTICE"/>
