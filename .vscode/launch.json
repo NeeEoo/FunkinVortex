@@ -4,7 +4,7 @@
             "name": "HXCPP",
             "type": "hxcpp",
             "request": "launch",
-            "program": "${workspaceFolder}/export/debug/windows/bin/Tandem.exe",
+            "program": "${workspaceFolder}/export/debug/windows/bin/TandemEditor.exe",
             "preLaunchTask": "lime: build windows -debug"
         }
     ]
