@@ -1,6 +1,5 @@
 package;
 
-import Section.SwagSection;
 import haxe.Json;
 import haxe.format.JsonParser;
 import lime.utils.Assets;
@@ -40,29 +39,6 @@ typedef SwagSong =
 
 class Song
 {
-	public var song:String;
-	public var notes:Array<SwagSection>;
-	public var bpm:Int;
-	public var needsVoices:Bool = true;
-	public var speed:Float = 1;
-
-	public var player1:String = 'bf';
-	public var player2:String = 'dad';
-	public var stage:String = 'stage';
-	public var gf:String = 'gf';
-	public var isMoody:Null<Bool> = false;
-	public var isSpooky:Null<Bool> = false;
-	public var cutsceneType:String = "none";
-	public var uiType:String = 'normal';
-	public var isHey:Null<Bool> = false;
-
-	public function new(song, notes, bpm)
-	{
-		this.song = song;
-		this.notes = notes;
-		this.bpm = bpm;
-	}
-
 	public static function loadFromJson(file:String):SwagSong
 	{
 		var rawJson:String = "";
@@ -74,45 +50,38 @@ class Song
 			// LOL GOING THROUGH THE BULLSHIT TO CLEAN IDK WHATS STRANGE
 		}
 		var parsedJson = parseJSONshit(rawJson);
+		var songName = parsedJson.song.toLowerCase();
 		if (parsedJson.stage == null)
 		{
-			if (parsedJson.song.toLowerCase() == 'spookeez'
-				|| parsedJson.song.toLowerCase() == 'monster'
-				|| parsedJson.song.toLowerCase() == 'south')
+			if (songName == 'spookeez' || songName == 'monster' || songName == 'south')
 			{
 				parsedJson.stage = 'spooky';
 			}
-			else if (parsedJson.song.toLowerCase() == 'pico'
-				|| parsedJson.song.toLowerCase() == 'philly'
-				|| parsedJson.song.toLowerCase() == 'blammed')
+			else if (songName == 'pico' || songName == 'philly' || songName == 'blammed')
 			{
 				parsedJson.stage = 'philly';
 			}
-			else if (parsedJson.song.toLowerCase() == 'milf'
-				|| parsedJson.song.toLowerCase() == 'high'
-				|| parsedJson.song.toLowerCase() == 'satin-panties')
+			else if (songName == 'milf' || songName == 'high' || songName == 'satin-panties')
 			{
 				parsedJson.stage = 'limo';
 			}
-			else if (parsedJson.song.toLowerCase() == 'cocoa' || parsedJson.song.toLowerCase() == 'eggnog')
+			else if (songName == 'cocoa' || songName == 'eggnog')
 			{
 				parsedJson.stage = 'mall';
 			}
-			else if (parsedJson.song.toLowerCase() == 'winter-horrorland')
+			else if (songName == 'winter-horrorland')
 			{
 				parsedJson.stage = 'mallEvil';
 			}
-			else if (parsedJson.song.toLowerCase() == 'senpai' || parsedJson.song.toLowerCase() == 'roses')
+			else if (songName == 'senpai' || songName == 'roses')
 			{
 				parsedJson.stage = 'school';
 			}
-			else if (parsedJson.song.toLowerCase() == 'thorns')
+			else if (songName == 'thorns')
 			{
 				parsedJson.stage = 'schoolEvil';
 			}
-			else if (parsedJson.song.toLowerCase() == "ugh"
-				|| parsedJson.song.toLowerCase() == "stress"
-				|| parsedJson.song.toLowerCase() == "guns")
+			else if (songName == "ugh" || songName == "stress" || songName == "guns")
 			{
 				parsedJson.stage = 'tank';
 			}
@@ -152,13 +121,13 @@ class Song
 		if (parsedJson.isHey == null)
 		{
 			parsedJson.isHey = false;
-			if (parsedJson.song.toLowerCase() == 'bopeebo')
+			if (songName == 'bopeebo')
 				parsedJson.isHey = true;
 		}
 		if (parsedJson.isCheer = null)
 		{
 			parsedJson.isCheer = false;
-			if (parsedJson.song.toLowerCase() == "tutorial")
+			if (songName == "tutorial")
 			{
 				parsedJson.isCheer = true;
 			}
@@ -179,7 +148,7 @@ class Song
 					parsedJson.gf = 'gf-pixel';
 				case 'tank':
 					parsedJson.gf = 'gf-tankmen';
-					if (parsedJson.song.toLowerCase() == "stress")
+					if (songName == "stress")
 					{
 						parsedJson.gf = "pico-speaker";
 					}
@@ -189,7 +158,7 @@ class Song
 		}
 		if (parsedJson.isMoody == null)
 		{
-			if (parsedJson.song.toLowerCase() == 'roses')
+			if (songName == 'roses')
 			{
 				parsedJson.isMoody = true;
 			}
@@ -210,13 +179,13 @@ class Song
 				parsedJson.isSpooky = false;
 			}
 		}
-		if (parsedJson.song.toLowerCase() == 'winter-horrorland')
+		if (songName == 'winter-horrorland')
 		{
 			parsedJson.cutsceneType = "monster";
 		}
 		if (parsedJson.cutsceneType == null)
 		{
-			switch (parsedJson.song.toLowerCase())
+			switch (songName)
 			{
 				case 'roses':
 					parsedJson.cutsceneType = "angry-senpai";
@@ -232,9 +201,7 @@ class Song
 		}
 		if (parsedJson.uiType == null)
 		{
-			if (parsedJson.song.toLowerCase() == 'roses'
-				|| parsedJson.song.toLowerCase() == 'senpai'
-				|| parsedJson.song.toLowerCase() == 'thorns')
+			if (songName == 'roses' || songName == 'senpai' || songName == 'thorns')
 			{
 				parsedJson.uiType = 'pixel';
 			}
@@ -243,23 +210,6 @@ class Song
 				parsedJson.uiType = 'normal';
 			}
 		}
-		// FIX THE CASTING ON WINDOWS/NATIVE
-		// Windows???
-		// trace(songData);
-
-		// trace('LOADED FROM JSON: ' + songData.notes);
-		/*
-			for (i in 0...songData.notes.length)
-			{
-				trace('LOADED FROM JSON: ' + songData.notes[i].sectionNotes);
-				// songData.notes[i].sectionNotes = songData.notes[i].sectionNotes
-			}
-
-				daNotes = songData.notes;
-				daSong = songData.song;
-				daSections = songData.sections;
-				daBpm = songData.bpm;
-				daSectionLengths = songData.sectionLengths; */
 
 		return parsedJson;
 	}

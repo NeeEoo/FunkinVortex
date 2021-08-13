@@ -220,7 +220,7 @@ class PlayState extends FlxUIState
 			updateTextParams();
 			var json = {
 				"song": _song,
-				"generatedBy": "FunkinVortexM+"
+				"generatedBy": "FunkinVortex"
 			};
 			var data = Json.stringify(json);
 			if ((data != null) && (data.length > 0))
@@ -502,7 +502,7 @@ class PlayState extends FlxUIState
 		tabviewThingy.findComponent("shouldSing", CheckBox).selected = false;
 		tabviewThingy.findComponent("ignoreMods", CheckBox).selected = false;
 
-		tabviewThingy.x = FlxG.width / 2;
+		tabviewThingy.x = FlxG.width / 2 + 150;
 		tabviewThingy.y = 100;
 		LINE_SPACING = Std.int(strumLine.height);
 		curSnap = LINE_SPACING * 4;
@@ -550,6 +550,8 @@ class PlayState extends FlxUIState
 		add(tabviewThingy);
 		add(selectBox);
 		// add(haxeUIOpen);
+
+		FlxG.camera.follow(strumLine);
 	}
 
 	function updateGrid()
@@ -581,7 +583,7 @@ class PlayState extends FlxUIState
 
 	function addSection(lengthInSteps:Int = 16)
 	{
-		var sec:Section.SwagSection = {
+		var sec:SwagSection = {
 			lengthInSteps: lengthInSteps,
 			bpm: _song.bpm,
 			changeBPM: false,
@@ -744,7 +746,10 @@ class PlayState extends FlxUIState
 	override public function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		camFollow.setPosition(strumLine.x + Note.swagWidth * 2, strumLine.y);
+		// strumLine.y = getYfromStrum((Conductor.songPosition - sectionStartTime()) % (Conductor.stepCrochet * _song.notes[curSection].lengthInSteps));
+		//var stsection = getSussySectionFromY(strumLine.y);
+		//strumLine.y = getYfromStrum(Conductor.songPosition, stsection);
+		// camFollow.setPosition(strumLine.x + Note.swagWidth * 2, strumLine.y);
 		noteControls = [
 			FlxG.keys.justPressed.ONE,
 			FlxG.keys.justPressed.TWO,
