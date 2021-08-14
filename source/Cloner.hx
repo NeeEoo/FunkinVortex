@@ -2,7 +2,6 @@ package;
 
 import Array;
 import Type.ValueType;
-import Type.ValueType;
 import haxe.Constraints.IMap;
 import haxe.ds.IntMap;
 import haxe.ds.ObjectMap;
