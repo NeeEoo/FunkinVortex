@@ -1,5 +1,6 @@
 package;
 
+import flixel.FlxG;
 import flixel.FlxGame;
 import haxe.ui.Toolkit;
 import openfl.display.Sprite;
@@ -12,5 +13,6 @@ class Main extends Sprite
 		Toolkit.init();
 		Toolkit.theme = "dark";
 		addChild(new FlxGame(0, 0, PlayState));
+		FlxG.fixedTimestep = false;
 	}
 }

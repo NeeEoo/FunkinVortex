@@ -35,6 +35,7 @@ import haxe.ui.containers.VBox;
 import haxe.ui.containers.menus.Menu;
 import haxe.ui.containers.menus.MenuBar;
 import haxe.ui.containers.menus.MenuItem;
+import haxe.ui.containers.menus.MenuSeparator;
 import haxe.ui.core.Component;
 import haxe.ui.events.MouseEvent;
 import haxe.ui.events.UIEvent;
@@ -67,13 +68,14 @@ enum abstract Snaps(Int) from Int to Int
 // we don't have to worry about backspaces ^-^
 class PlayState extends FlxUIState
 {
+	public static var instance:PlayState;
 	static var _song:Song.SwagSong;
 
 	var chart:FlxSpriteGroup;
 	var staffLines:FlxSprite;
 	var strumLine:FlxSpriteGroup;
 	var curRenderedNotes:FlxTypedSpriteGroup<Note>;
-	var curRenderedSus:FlxSpriteGroup;
+	var curRenderedSus:FlxTypedSpriteGroup<HoldNote>;
 	var snaptext:FlxText;
 	var curSnap:Float = 0;
 	// var ui_box:FlxUITabMenu;
@@ -120,10 +122,11 @@ class PlayState extends FlxUIState
 
 	override public function create()
 	{
+		instance = this;
 		super.create();
 		strumLine = new FlxSpriteGroup(0, 0);
 		curRenderedNotes = new FlxTypedSpriteGroup<Note>();
-		curRenderedSus = new FlxSpriteGroup();
+		curRenderedSus = new FlxTypedSpriteGroup<HoldNote>();
 
 		enemyBG = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_H);
 		bfBG = FlxGridOverlay.create(GRID_S, GRID_S, GRID_S * 4, GRID_H);
@@ -165,6 +168,22 @@ class PlayState extends FlxUIState
 		menuBar = new MenuBar();
 		menuBar.customStyle.width = FlxG.width;
 
+		var editorName = new Menu();
+		editorName.text = "Tandem";
+		var creditsOf = new MenuItem();
+		creditsOf.text = "Made by:";
+
+		var ne_eoName = new MenuItem();
+		ne_eoName.text = "Ne_Eo";
+		var whatifyName = new MenuItem();
+		whatifyName.text = "Whatify";
+
+		editorName.addComponent(creditsOf);
+		editorName.addComponent(new MenuSeparator());
+		editorName.addComponent(ne_eoName);
+		editorName.addComponent(whatifyName);
+		menuBar.addComponent(editorName);
+
 		var fileMenu = new Menu();
 		fileMenu.text = "File";
 
@@ -176,7 +195,7 @@ class PlayState extends FlxUIState
 			updateTextParams();
 			var json = {
 				"song": _song,
-				"generatedBy": "FunkinVortex"
+				"generatedBy": "TandemEditor"
 			};
 			var data = Json.stringify(json);
 			if ((data != null) && (data.length > 0))
@@ -242,7 +261,7 @@ class PlayState extends FlxUIState
 			}
 			var json = {
 				"song": sussySong,
-				"generatedBy": "FunkinVortexExport"
+				"generatedBy": "TandemEditor"
 			};
 			var data = Json.stringify(json);
 			if ((data != null) && (data.length > 0))
@@ -254,6 +273,7 @@ class PlayState extends FlxUIState
 		fileMenu.addComponent(loadInstMenu);
 		fileMenu.addComponent(loadVoiceMenu);
 		menuBar.addComponent(fileMenu);
+
 		tabviewThingy = ComponentMacros.buildComponent('assets/data/tabmenu.xml');
 		tabviewThingy.findComponent("bfText", TextField).text = _song.player1;
 		tabviewThingy.findComponent("enemyText", TextField).text = _song.player2;
@@ -400,8 +420,9 @@ class PlayState extends FlxUIState
 		tempBpm = _song.bpm;
 		Conductor.changeBPM(_song.bpm);
 		Conductor.mapBPMChanges(_song);
-		selectBox = new FlxSprite().makeGraphic(1, 1, FlxColor.GRAY);
+		selectBox = new FlxSprite().makeGraphic(1, 1, FlxColor.BLUE);
 		selectBox.visible = false;
+		selectBox.alpha = 0.7;
 		selectBox.scrollFactor.set();
 		// add(staffLines);
 		add(strumLine);
@@ -420,7 +441,7 @@ class PlayState extends FlxUIState
 		// add(toolInfo);
 		// add(ui_box);
 		add(tabviewThingy);
-		add(selectBox);
+		// add(selectBox);
 		// add(haxeUIOpen);
 
 		FlxG.camera.follow(strumLine);
@@ -523,7 +544,7 @@ class PlayState extends FlxUIState
 			else if (wname == 'note_susLength')
 			{
 				curSelectedNote[2] = nums.value;
-				updateNotes();
+				redrawNote(curSelectedNote);
 			}
 			else if (wname == 'section_bpm')
 			{
@@ -590,10 +611,7 @@ class PlayState extends FlxUIState
 	override public function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		// strumLine.y = getYfromStrum((Conductor.songPosition - sectionStartTime()) % (Conductor.stepCrochet * _song.notes[curSection].lengthInSteps));
-		//var stsection = getSussySectionFromY(strumLine.y);
-		//strumLine.y = getYfromStrum(Conductor.songPosition, stsection);
-		// camFollow.setPosition(strumLine.x + Note.swagWidth * 2, strumLine.y);
+
 		var justPressed = FlxG.keys.justPressed;
 		var justReleased = FlxG.keys.justReleased;
 		var noteControls = [
@@ -693,12 +711,11 @@ class PlayState extends FlxUIState
 				{
 					for (note in curRenderedNotes.members)
 					{
-						if (FlxG.mouse.overlaps(note))
+						if (note.visible && FlxG.mouse.overlaps(note))
 						{
 							strumLine.y = note.y;
-							var goodSection = getSussySectionFromY(strumLine.y);
 							var noteData = note.noteData;
-							if (_song.notes[goodSection].mustHitSection)
+							if (_song.notes[note.section].mustHitSection)
 							{
 								noteData = (noteData + 4) % 8;
 							}
@@ -717,9 +734,8 @@ class PlayState extends FlxUIState
 						if (FlxG.mouse.overlaps(note))
 						{
 							strumLine.y = note.y;
-							var goodSection = getSussySectionFromY(strumLine.y);
 							var noteData = note.noteData;
-							if (_song.notes[goodSection].mustHitSection)
+							if (_song.notes[note.section].mustHitSection)
 							{
 								noteData = (noteData + 4) % 8;
 							}
@@ -759,6 +775,10 @@ class PlayState extends FlxUIState
 				{
 					vocalSound.time = FlxG.sound.music.time;
 				}
+
+				curRenderedNotes.forEach(lightStrum);
+				curRenderedSus.forEach(lightStrum);
+
 				if(section != oldSection) {
 					updateGrid();
 					oldSection = section;
@@ -770,30 +790,16 @@ class PlayState extends FlxUIState
 			trace(FocusManager.instance.focus);
 		}
 
-		var cameraYScroll = FlxG.camera.scroll.y;
-
-		for(note in curRenderedNotes)
+		strumLine.forEach(function(spr:FlxSprite)
 		{
-			var minY:Float = note.y - note.offset.y - cameraYScroll; //; * note.scrollFactor.y;
-			var isOnCamera = minY <= 720 && minY >= -note.height - 200;
-
-			if (isOnCamera)
+			if (spr.animation.finished)
 			{
-				note.active = true;
-				note.visible = true;
+				spr.animation.play('static');
+				spr.centerOffsets();
 			}
-			else
-			{
-				note.active = false;
-				note.visible = false;
-			}
-		}
+		});
 
-		var count = 0;
-		for(note in curRenderedNotes) {
-			if(note.visible) count++;
-		}
-		curRenderedTxt.text = "Visible Notes: " + count;
+		optimizeNotes();
 
 		for (i in 0...noteControls.length)
 		{
@@ -822,6 +828,83 @@ class PlayState extends FlxUIState
 		}
 	}
 
+	function lightStrum(note:BaseNote) {
+		if(!note.visible) return;
+
+		var noteData = note.noteData;
+		if (_song.notes[note.section].mustHitSection)
+		{
+			noteData = (noteData + 4) % 8;
+		}
+
+		var strum = strumLine.members[noteData];
+
+		var shouldLight = if(note.isSustainNote) {
+			strum.overlaps(note);
+		} else {
+			CoolUtil.nearlyEquals(strum.y, note.y, 10);
+		}
+
+		if (shouldLight)
+		{
+			var wasNotConfirm = strum.animation.curAnim.name != "confirm";
+			if(wasNotConfirm) {
+				strum.centerOffsets();
+			}
+			strum.animation.play("confirm", true);
+
+			if(wasNotConfirm) {
+				strum.offset.add(10, 10);
+			}
+		}
+	}
+
+	function optimizeNotes() {
+		var cameraYScroll = FlxG.camera.scroll.y;
+
+		for(note in curRenderedNotes)
+		{
+			var minY:Float = note.y - note.offset.y - cameraYScroll; //; * note.scrollFactor.y;
+			var isOnCamera = minY <= 720 && minY >= -note.height - 200;
+
+			if (isOnCamera)
+			{
+				note.active = true;
+				note.visible = true;
+			}
+			else
+			{
+				note.active = false;
+				note.visible = false;
+			}
+
+			if(note.y < strumLine.y) {
+				note.alpha = 0.5;
+				note.antialiasing = false;
+			} else {
+				note.alpha = 1;
+				note.antialiasing = true;
+			}
+		}
+
+		for(sus in curRenderedSus)
+		{
+			if(sus.y + sus.height < strumLine.y) {
+				sus.alpha = 0.5;
+			} else {
+				sus.alpha = 1;
+			}
+		}
+
+		if(curRenderedTxt != null) {
+			var count = 0;
+			for(note in curRenderedNotes) {
+				if(note.visible) count++;
+			}
+			curRenderedTxt.text = "Visible Notes: " + count;
+		}
+	}
+
 	private function moveStrumLine(change:Int = 0)
 	{
 		strumLine.y += change * curSnap;
@@ -838,14 +921,15 @@ class PlayState extends FlxUIState
 		{
 			curSelectedNote[2] = getSussyStrumTime(strumLine.y) - curSelectedNote[0];
 			curSelectedNote[2] = FlxMath.bound(curSelectedNote[2], 0);
-			updateNotes();
+			redrawNote(curSelectedNote);
 		}
 		if (curHoldSelect != null)
 		{
 			curHoldSelect[2] = getSussyStrumTime(strumLine.y) - curHoldSelect[0];
 			curHoldSelect[2] = FlxMath.bound(curHoldSelect[2], 0);
-			updateNotes();
+			redrawNote(curHoldSelect);
 		}
+
 		if(section != oldSection) {
 			updateGrid();
 			oldSection = section;
@@ -865,23 +949,25 @@ class PlayState extends FlxUIState
 			babyArrow.frames = FlxAtlasFrames.fromSparrow('assets/images/NOTE_assets.png', 'assets/images/NOTE_assets.xml');
 			switch (i)
 			{
-				case -4 | 0:
-					babyArrow.animation.addByPrefix('purple', 'arrowLEFT');
-					babyArrow.animation.play("purple");
+				case 0 | -4:
+					babyArrow.animation.addByPrefix('static', 'arrowLEFT');
+					babyArrow.animation.addByPrefix('confirm', 'purple confirm', 24, false);
 				case 1 | -3:
-					babyArrow.animation.addByPrefix('blue', 'arrowDOWN');
-					babyArrow.animation.play("blue");
+					babyArrow.animation.addByPrefix('static', 'arrowDOWN');
+					babyArrow.animation.addByPrefix('confirm', 'blue confirm', 24, false);
 				case 2 | -2:
-					babyArrow.animation.addByPrefix('green', 'arrowUP');
-					babyArrow.animation.play("green");
+					babyArrow.animation.addByPrefix('static', 'arrowUP');
+					babyArrow.animation.addByPrefix('confirm', 'green confirm', 24, false);
 				case 3 | -1:
-					babyArrow.animation.addByPrefix('red', 'arrowRIGHT');
-					babyArrow.animation.play("red");
+					babyArrow.animation.addByPrefix('static', 'arrowRIGHT');
+					babyArrow.animation.addByPrefix('confirm', 'red confirm', 24, false);
 			}
+			babyArrow.animation.play("static");
 			babyArrow.antialiasing = true;
 			babyArrow.setGraphicSize(GRID_S);
 			babyArrow.x += GRID_S * (i - offset) + 50;
 			babyArrow.updateHitbox();
+			babyArrow.centerOffsets();
 			babyArrow.scrollFactor.set();
 			//babyArrow.ID = i;
 			strumLine.add(babyArrow);
@@ -944,24 +1030,24 @@ class PlayState extends FlxUIState
 		}
 		// prefer overloading : )
 		var goodArray:Array<Dynamic> = [noteStrum, noteData, noteSus, false];
+		var compareStrum = CoolUtil.truncateFloat(noteStrum, 1);
 		for (note in _song.notes[curSection].sectionNotes)
 		{
-			if (note[1] % 8 == noteData % 8 && CoolUtil.truncateFloat(note[0], 1) == CoolUtil.truncateFloat(goodArray[0], 1))
+			if (note[1] % 8 == noteData % 8 && CoolUtil.truncateFloat(note[0], 1) == compareStrum)
 			{
-				_song.notes[curSection].sectionNotes.remove(note);
+				deleteNote(note, curSection);
 				// if it was not the same type
 				// we replace it instead of outright deleting it
 				if (note[1] != noteData)
 				{
 					break;
 				}
-				updateNotes();
 				return;
 			}
 		}
 		_song.notes[curSection].sectionNotes.push(goodArray);
 		curHoldSelect = goodArray;
-		updateNotes();
+		drawNote(goodArray, curSection);
 	}
 
 	private function changeSnap(increase:Bool)
@@ -1028,23 +1114,67 @@ class PlayState extends FlxUIState
 		var curSection = susInfo.section;
 
 		var noteData = id;
-		var noteSus = 0;
 		if (_song.notes[curSection].mustHitSection)
 		{
 			noteData = (noteData + 4) % 8;
 		}
-		var goodArray:Array<Dynamic> = [noteStrum, noteData, noteSus, false];
-
+		var compareStrum = CoolUtil.truncateFloat(noteStrum, 1);
 		for (note in _song.notes[curSection].sectionNotes)
 		{
-			if (note[1] == noteData && CoolUtil.truncateFloat(note[0], 1) == CoolUtil.truncateFloat(goodArray[0], 1))
+			if (note[1] == noteData && CoolUtil.truncateFloat(note[0], 1) == compareStrum)
 			{
 				curSelectedNote = note;
-				updateNotes();
 				updateNoteUI();
 				return;
 			}
 		}
+	}
+
+	function deleteNote(noteInfo:Array<Dynamic>, section:Int) {
+		var curNote:Note = null;
+
+		for(note in curRenderedNotes) {
+			if(note.noteInfo == noteInfo) {
+				curNote = note;
+				break;
+			}
+		}
+
+		if(curNote == null) {
+			return;
+		}
+
+		if(curNote.susVis != null) {
+			var sustainVis = curNote.susVis;
+			curRenderedSus.remove(sustainVis, true);
+		}
+
+		curRenderedNotes.remove(curNote, true);
+		_song.notes[section].sectionNotes.remove(noteInfo);
+	}
+
+	function redrawNote(noteInfo:Array<Dynamic>) {
+		var curNote:Note = null;
+
+		for(note in curRenderedNotes) {
+			if(note.noteInfo == noteInfo) {
+				curNote = note;
+				break;
+			}
+		}
+
+		if(curNote == null) {
+			return;
+		}
+
+		if(curNote.susVis != null) {
+			var sustainVis = curNote.susVis;
+			curRenderedSus.remove(sustainVis, true);
+		}
+
+		curRenderedNotes.remove(curNote, true);
+
+		drawNote(noteInfo, curNote.section);
 	}
 
 	private function getGoodInfo(noteData:Int)
@@ -1056,13 +1186,6 @@ class PlayState extends FlxUIState
 		}
 		return noteData;
 	}
-
-	static var susColor:Array<Int> = [
-		0xFFC24B99,
-		0xFF00FFFF,
-		0xFF12FA05,
-		0xFFF9393F
-	];
 
 	private function updateNotes()
 	{
@@ -1094,36 +1217,49 @@ class PlayState extends FlxUIState
 
 			for (i in sectionInfo)
 			{
-				var daStrumTime = i[0];
-				var daNoteInfo = i[1];
-				var daSus = i[2];
-
-				var note = new Note(daStrumTime, daNoteInfo, null, false);
-				//note.sustainLength = daSus;
-				note.setGraphicSize(Std.int(strumLine.members[0].width));
-				note.updateHitbox();
-				var cNoteInfo = daNoteInfo % 8;
-				if (_song.notes[j].mustHitSection) // Invert placement
-				{
-					cNoteInfo = (cNoteInfo + 4) % 8;
-				}
-				note.x = strumLine.members[cNoteInfo % 8].x;
-				note.y = Math.floor(getYfromStrum(daStrumTime, j));
-
-				curRenderedNotes.add(note);
-				if (daSus > 0)
-				{
-					final SUS_WIDTH:Int = 8;
-
-					var susHeight = Std.int(daSus * susMul);
-					var susX = note.x + note.width / 2 - SUS_WIDTH / 2;
-					var color = susColor[daNoteInfo % 4];
-
-					var sustainVis = new FlxSprite(susX, note.y + GRID_S).makeGraphic(SUS_WIDTH, susHeight, color);
-					sustainVis.active = false;
-					curRenderedSus.add(sustainVis);
-				}
+				drawNote(i, j, susMul);
 			}
+		}
+
+		optimizeNotes();
+	}
+
+	function drawNote(noteInfo:Array<Dynamic>, section:Int, ?susMul:Float) {
+		if(susMul == null) {
+			susMul = GRID_S / Conductor.stepCrochet;
+		}
+
+		var daStrumTime:Float = noteInfo[0];
+		var daNoteData:Int = noteInfo[1];
+		var daSus:Float = noteInfo[2];
+
+		var note = new Note(daStrumTime, daNoteData);
+		note.noteInfo = noteInfo;
+		//note.sustainLength = daSus;
+		note.setGraphicSize(Std.int(strumLine.members[0].width));
+		note.updateHitbox();
+		note.section = section;
+		var cNoteData = daNoteData % 8;
+		if (_song.notes[section].mustHitSection) // Invert placement
+		{
+			cNoteData = (cNoteData + 4) % 8;
+		}
+		note.x = strumLine.members[cNoteData % 8].x;
+		note.y = Math.floor(getYfromStrum(daStrumTime, section));
+
+		curRenderedNotes.add(note);
+		if (daSus > 0)
+		{
+			var susHeight = Std.int(daSus * susMul);
+			var susX = note.x + note.width / 2 - HoldNote.SUS_WIDTH / 2;
+
+			var sustainVis = new HoldNote(daStrumTime, daNoteData, susHeight);
+			sustainVis.x = susX;
+			sustainVis.y = note.y + GRID_S;
+			sustainVis.section = section;
+
+			note.susVis = sustainVis;
+			curRenderedSus.add(sustainVis);
 		}
 	}
 
