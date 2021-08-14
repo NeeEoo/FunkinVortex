@@ -5,6 +5,8 @@ import flixel.graphics.frames.FlxAtlasFrames;
 class Note extends BaseNote
 {
 	public var sustainLength:Float = 0;
+	public var noteInfo:Array<Dynamic>;
+	public var susVis:HoldNote;
 
 	public function new(strumTime:Float, noteData:Int)
 	{

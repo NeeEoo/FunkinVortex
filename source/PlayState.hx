@@ -544,7 +544,7 @@ class PlayState extends FlxUIState
 			else if (wname == 'note_susLength')
 			{
 				curSelectedNote[2] = nums.value;
-				updateNotes();
+				redrawNote(curSelectedNote);
 			}
 			else if (wname == 'section_bpm')
 			{
@@ -711,7 +711,7 @@ class PlayState extends FlxUIState
 				{
 					for (note in curRenderedNotes.members)
 					{
-						if (FlxG.mouse.overlaps(note))
+						if (note.visible && FlxG.mouse.overlaps(note))
 						{
 							strumLine.y = note.y;
 							var noteData = note.noteData;
@@ -921,15 +921,13 @@ class PlayState extends FlxUIState
 		{
 			curSelectedNote[2] = getSussyStrumTime(strumLine.y) - curSelectedNote[0];
 			curSelectedNote[2] = FlxMath.bound(curSelectedNote[2], 0);
+			redrawNote(curSelectedNote);
 		}
 		if (curHoldSelect != null)
 		{
 			curHoldSelect[2] = getSussyStrumTime(strumLine.y) - curHoldSelect[0];
 			curHoldSelect[2] = FlxMath.bound(curHoldSelect[2], 0);
-		}
-
-		if(curHoldSelect != null || curSelectedNote != null) {
-			updateNotes();
+			redrawNote(curHoldSelect);
 		}
 
 		if(section != oldSection) {
@@ -1037,20 +1035,19 @@ class PlayState extends FlxUIState
 		{
 			if (note[1] % 8 == noteData % 8 && CoolUtil.truncateFloat(note[0], 1) == compareStrum)
 			{
-				_song.notes[curSection].sectionNotes.remove(note);
+				deleteNote(note, curSection);
 				// if it was not the same type
 				// we replace it instead of outright deleting it
 				if (note[1] != noteData)
 				{
 					break;
 				}
-				updateNotes();
 				return;
 			}
 		}
 		_song.notes[curSection].sectionNotes.push(goodArray);
 		curHoldSelect = goodArray;
-		updateNotes();
+		drawNote(goodArray, curSection);
 	}
 
 	private function changeSnap(increase:Bool)
@@ -1127,11 +1124,57 @@ class PlayState extends FlxUIState
 			if (note[1] == noteData && CoolUtil.truncateFloat(note[0], 1) == compareStrum)
 			{
 				curSelectedNote = note;
-				updateNotes();
 				updateNoteUI();
 				return;
 			}
 		}
+	}
+
+	function deleteNote(noteInfo:Array<Dynamic>, section:Int) {
+		var curNote:Note = null;
+
+		for(note in curRenderedNotes) {
+			if(note.noteInfo == noteInfo) {
+				curNote = note;
+				break;
+			}
+		}
+
+		if(curNote == null) {
+			return;
+		}
+
+		if(curNote.susVis != null) {
+			var sustainVis = curNote.susVis;
+			curRenderedSus.remove(sustainVis, true);
+		}
+
+		curRenderedNotes.remove(curNote, true);
+		_song.notes[section].sectionNotes.remove(noteInfo);
+	}
+
+	function redrawNote(noteInfo:Array<Dynamic>) {
+		var curNote:Note = null;
+
+		for(note in curRenderedNotes) {
+			if(note.noteInfo == noteInfo) {
+				curNote = note;
+				break;
+			}
+		}
+
+		if(curNote == null) {
+			return;
+		}
+
+		if(curNote.susVis != null) {
+			var sustainVis = curNote.susVis;
+			curRenderedSus.remove(sustainVis, true);
+		}
+
+		curRenderedNotes.remove(curNote, true);
+
+		drawNote(noteInfo, curNote.section);
 	}
 
 	private function getGoodInfo(noteData:Int)
@@ -1174,39 +1217,50 @@ class PlayState extends FlxUIState
 
 			for (i in sectionInfo)
 			{
-				var daStrumTime = i[0];
-				var daNoteInfo = i[1];
-				var daSus = i[2];
-
-				var note = new Note(daStrumTime, daNoteInfo);
-				//note.sustainLength = daSus;
-				note.setGraphicSize(Std.int(strumLine.members[0].width));
-				note.updateHitbox();
-				note.section = j;
-				var cNoteInfo = daNoteInfo % 8;
-				if (_song.notes[j].mustHitSection) // Invert placement
-				{
-					cNoteInfo = (cNoteInfo + 4) % 8;
-				}
-				note.x = strumLine.members[cNoteInfo % 8].x;
-				note.y = Math.floor(getYfromStrum(daStrumTime, j));
-
-				curRenderedNotes.add(note);
-				if (daSus > 0)
-				{
-					var susHeight = Std.int(daSus * susMul);
-					var susX = note.x + note.width / 2 - HoldNote.SUS_WIDTH / 2;
-
-					var sustainVis = new HoldNote(daStrumTime, daNoteInfo, susHeight);
-					sustainVis.x = susX;
-					sustainVis.y = note.y + GRID_S;
-					sustainVis.section = j;
-					curRenderedSus.add(sustainVis);
-				}
+				drawNote(i, j, susMul);
 			}
 		}
 
 		optimizeNotes();
+	}
+
+	function drawNote(noteInfo:Array<Dynamic>, section:Int, ?susMul:Float) {
+		if(susMul == null) {
+			susMul = GRID_S / Conductor.stepCrochet;
+		}
+
+		var daStrumTime:Float = noteInfo[0];
+		var daNoteData:Int = noteInfo[1];
+		var daSus:Float = noteInfo[2];
+
+		var note = new Note(daStrumTime, daNoteData);
+		note.noteInfo = noteInfo;
+		//note.sustainLength = daSus;
+		note.setGraphicSize(Std.int(strumLine.members[0].width));
+		note.updateHitbox();
+		note.section = section;
+		var cNoteData = daNoteData % 8;
+		if (_song.notes[section].mustHitSection) // Invert placement
+		{
+			cNoteData = (cNoteData + 4) % 8;
+		}
+		note.x = strumLine.members[cNoteData % 8].x;
+		note.y = Math.floor(getYfromStrum(daStrumTime, section));
+
+		curRenderedNotes.add(note);
+		if (daSus > 0)
+		{
+			var susHeight = Std.int(daSus * susMul);
+			var susX = note.x + note.width / 2 - HoldNote.SUS_WIDTH / 2;
+
+			var sustainVis = new HoldNote(daStrumTime, daNoteData, susHeight);
+			sustainVis.x = susX;
+			sustainVis.y = note.y + GRID_S;
+			sustainVis.section = section;
+
+			note.susVis = sustainVis;
+			curRenderedSus.add(sustainVis);
+		}
 	}
 
 	private function getYfromStrum(strumTime:Float, section:Int):Float
