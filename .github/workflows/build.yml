@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: linuxBuild
-          path: 'export/linux/bin' 
+          path: 'export/release/linux/bin' 
   buildWindows:
     runs-on: windows-latest
     
@@ -93,14 +93,14 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: windowsBuild
-          path: export/windows/bin
+          path: export/release/windows/bin
       - name: Compile 32 bit
         run: haxelib run lime build windows -D32bit -32
       - name: Publish 32bit
         uses: actions/upload-artifact@v2
         with:
           name: windows32Build
-          path: export/32bit/windows/bin
+          path: export/32bit/release/windows/bin
   buildMac:
     runs-on: macos-latest
 
@@ -137,4 +137,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: macBuild
-          path: export/macos/bin
+          path: export/release/macos/bin
